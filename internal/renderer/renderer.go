@@ -91,22 +91,20 @@ func findFont() string {
 
 // RenderBuffer renders a ScreenBuffer to a PNG file with colors
 func (r *Renderer) RenderBuffer(buffer *ScreenBuffer, outputPath string) error {
-	// Calculate image dimensions with small margin
+	// Calculate image dimensions - just padding, no extra margin
 	padding := float64(r.theme.Padding)
-	if padding < 20 {
-		padding = 20
+	if padding < 16 {
+		padding = 16
 	}
-	margin := 16.0 // Small fixed margin around the terminal
 
-	imgWidth := int(float64(buffer.Width)*r.charWidth + padding*2 + margin*2)
-	imgHeight := int(float64(buffer.Height)*r.charHeight + padding*2 + margin*2)
+	imgWidth := int(float64(buffer.Width)*r.charWidth + padding*2)
+	imgHeight := int(float64(buffer.Height)*r.charHeight + padding*2)
 
 	// Create drawing context
 	dc := gg.NewContext(imgWidth, imgHeight)
 
-	// Fill background with same color everywhere
-	bgColor := parseHexColor(r.theme.Background)
-	dc.SetColor(bgColor)
+	// Fill entire background with black (same as terminal default)
+	dc.SetColor(color.RGBA{0, 0, 0, 255})
 	dc.Clear()
 
 	// Load font
@@ -117,20 +115,21 @@ func (r *Renderer) RenderBuffer(buffer *ScreenBuffer, outputPath string) error {
 		}
 	}
 
-	// Render each cell (offset by margin + padding)
-	offsetX := margin + padding
-	offsetY := margin + padding
+	// Default colors
+	bgColor := parseHexColor(r.theme.Background)
+	defaultBG := color.RGBA{0, 0, 0, 255} // Terminal default is black
 
+	// Render each cell
 	for row, line := range buffer.Lines {
-		y := offsetY + float64(row)*r.charHeight + r.charHeight*0.85 // baseline offset
+		y := padding + float64(row)*r.charHeight + r.charHeight*0.85 // baseline offset
 
 		for col, cell := range line.Cells {
-			x := offsetX + float64(col)*r.charWidth
+			x := padding + float64(col)*r.charWidth
 
-			// Draw background if different from default
-			if cell.BG != bgColor && cell.BG.A > 0 {
+			// Draw background if not default black
+			if cell.BG != defaultBG && cell.BG.A > 0 && cell.BG != bgColor {
 				dc.SetColor(cell.BG)
-				dc.DrawRectangle(x, offsetY+float64(row)*r.charHeight, r.charWidth, r.charHeight)
+				dc.DrawRectangle(x, padding+float64(row)*r.charHeight, r.charWidth, r.charHeight)
 				dc.Fill()
 			}
 
