@@ -1,0 +1,17 @@
+# Binary
+eddie
+eddie.exe
+
+# Output
+screenshots/
+*.png
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
