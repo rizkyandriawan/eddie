@@ -34,6 +34,7 @@ type Session struct {
 	Name        string   `yaml:"name"`
 	Description string   `yaml:"description"`
 	Cwd         string   `yaml:"cwd"`
+	Command     string   `yaml:"command"`
 	Setup       []string `yaml:"setup"`
 	Prompts     []Prompt `yaml:"prompts"`
 }

@@ -70,8 +70,14 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 	rows := r.config.Terminal.Height
 	term := vt10x.New(vt10x.WithSize(cols, rows))
 
+	// Determine command to run
+	cmdStr := session.Command
+	if cmdStr == "" {
+		cmdStr = "claude"
+	}
+
 	// Start Claude Code in PTY
-	cmd := exec.Command("claude")
+	cmd := exec.Command("sh", "-c", cmdStr)
 	cmd.Dir = session.Cwd
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 
@@ -115,7 +121,23 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 			}
 		}
 
-		// Send input or keystroke
+		// Wait first (before any input)
+		if prompt.WaitUntil != "" {
+			// Wait until specific text appears
+			timeout := prompt.Timeout
+			if timeout == 0 {
+				timeout = 30000
+			}
+			err := waitUntilScreen(term, &mu, prompt.WaitUntil, time.Duration(timeout)*time.Millisecond)
+			if err != nil {
+				return result, fmt.Errorf("timeout waiting for '%s': %w", prompt.WaitUntil, err)
+			}
+		} else if prompt.Wait > 0 {
+			// Wait fixed duration
+			time.Sleep(time.Duration(prompt.Wait) * time.Millisecond)
+		}
+
+		// Send input or keystroke (after wait)
 		if prompt.Input != "" {
 			// Send the text input (without automatic newline)
 			_, err := ptmx.Write([]byte(prompt.Input))
@@ -132,20 +154,9 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 			}
 		}
 
-		// Wait for output
-		if prompt.WaitUntil != "" {
-			// Wait until specific text appears
-			timeout := prompt.Timeout
-			if timeout == 0 {
-				timeout = 30000
-			}
-			err := waitUntilScreen(term, &mu, prompt.WaitUntil, time.Duration(timeout)*time.Millisecond)
-			if err != nil {
-				return result, fmt.Errorf("timeout waiting for '%s': %w", prompt.WaitUntil, err)
-			}
-		} else if prompt.Wait > 0 {
-			// Wait fixed duration
-			time.Sleep(time.Duration(prompt.Wait) * time.Millisecond)
+		// Small delay after input to let terminal update
+		if prompt.Input != "" || prompt.Key != "" {
+			time.Sleep(200 * time.Millisecond)
 		}
 
 		// Capture screenshot

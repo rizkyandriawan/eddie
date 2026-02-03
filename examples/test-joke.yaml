@@ -18,25 +18,21 @@ sessions:
   - name: eddie-parker-joke
     description: "Claude Code makes a joke about Eddie and Parker"
     cwd: ~/writing/rizky-medium
+    command: "claude --continue"
     prompts:
-      # 1. Capture when Claude Code just opened (initial state)
+      # 1. Wait for Claude Code to load, then type the prompt
       - wait: 3000
+        input: "tell me a short joke about Eddie Brock and Peter Parker as rival photographers"
         capture: true
-        capture_name: "01-claude-opened"
+        capture_name: "01-typing-command"
 
-      # 2. Type the joke prompt (without Enter)
-      - input: "tell me a short joke about Eddie Brock and Peter Parker as rival photographers"
-        wait: 1000
-        capture: true
-        capture_name: "02-prompt-typed"
-
-      # 3. Press Enter to submit
+      # 2. Press Enter to submit
       - key: "enter"
         wait: 2000
         capture: true
-        capture_name: "03-prompt-sent"
+        capture_name: "02-command-sent"
 
-      # 4. Wait for Claude's response and capture the joke
+      # 3. Wait for Claude's response and capture the joke
       - wait: 60000
         capture: true
-        capture_name: "04-joke-response"
+        capture_name: "03-joke-response"
