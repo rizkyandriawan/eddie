@@ -2,9 +2,14 @@
 eddie
 eddie.exe
 
-# Output
+# Output (except examples/screenshots for README)
 screenshots/
+docs/
+test-screenshots/
+
+# Ignore PNGs except in examples
 *.png
+!examples/screenshots/*.png
 
 # IDE
 .idea/

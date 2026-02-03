@@ -1,0 +1,198 @@
+# Redis Tutorial Screenshots Config
+# Generates screenshots for the Redis tutorial
+
+output: ./examples/screenshots
+manifest: true
+
+terminal:
+  width: 80
+  height: 20
+
+theme:
+  name: dark
+  background: "#000000"
+  foreground: "#d4d4d4"
+  font_size: 16
+  padding: 12
+
+sessions:
+  # 1. Connect to Redis
+  - name: 01-connect
+    description: "Connect to Redis"
+    cwd: ~
+    command: "bash"
+    prompts:
+      - wait: 500
+        input: "redis-cli"
+        capture: true
+        capture_name: "01-redis-cli"
+      - key: "enter"
+        wait: 500
+        capture: true
+        capture_name: "02-connected"
+
+  # 2. PING/PONG
+  - name: 02-ping
+    description: "Basic ping"
+    cwd: ~
+    command: "redis-cli"
+    prompts:
+      - wait: 500
+        input: "PING"
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "03-ping-pong"
+
+  # 3. SET/GET
+  - name: 03-strings
+    description: "String commands"
+    cwd: ~
+    command: "redis-cli"
+    prompts:
+      - wait: 500
+        input: "SET name \"John Doe\""
+      - key: "enter"
+        wait: 300
+        input: "GET name"
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "04-set-get"
+      - input: "SET counter 100"
+      - key: "enter"
+        wait: 300
+        input: "INCR counter"
+      - key: "enter"
+        wait: 300
+        input: "INCRBY counter 50"
+      - key: "enter"
+        wait: 300
+        input: "GET counter"
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "05-incr"
+
+  # 4. Hashes
+  - name: 04-hashes
+    description: "Hash commands"
+    cwd: ~
+    command: "redis-cli"
+    prompts:
+      - wait: 500
+        input: "HSET user:1 name \"Alice\" age 30 city \"NYC\""
+      - key: "enter"
+        wait: 300
+        input: "HGET user:1 name"
+      - key: "enter"
+        wait: 300
+        input: "HGETALL user:1"
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "06-hashes"
+
+  # 5. Lists
+  - name: 05-lists
+    description: "List commands"
+    cwd: ~
+    command: "redis-cli"
+    prompts:
+      - wait: 500
+        input: "RPUSH tasks \"task1\" \"task2\" \"task3\""
+      - key: "enter"
+        wait: 300
+        input: "LRANGE tasks 0 -1"
+      - key: "enter"
+        wait: 300
+        input: "LPOP tasks"
+      - key: "enter"
+        wait: 300
+        input: "LRANGE tasks 0 -1"
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "07-lists"
+
+  # 6. Sets
+  - name: 06-sets
+    description: "Set commands"
+    cwd: ~
+    command: "redis-cli"
+    prompts:
+      - wait: 500
+        input: "SADD tags \"redis\" \"database\" \"nosql\""
+      - key: "enter"
+        wait: 300
+        input: "SMEMBERS tags"
+      - key: "enter"
+        wait: 300
+        input: "SISMEMBER tags \"redis\""
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "08-sets"
+
+  # 7. Sorted Sets
+  - name: 07-sorted-sets
+    description: "Sorted set commands"
+    cwd: ~
+    command: "redis-cli"
+    prompts:
+      - wait: 500
+        input: "ZADD leaderboard 100 \"player1\" 200 \"player2\" 150 \"player3\""
+      - key: "enter"
+        wait: 300
+        input: "ZRANGE leaderboard 0 -1 WITHSCORES"
+      - key: "enter"
+        wait: 300
+        input: "ZRANK leaderboard \"player2\""
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "09-sorted-sets"
+
+  # 8. Expiration
+  - name: 08-expiration
+    description: "Key expiration"
+    cwd: ~
+    command: "redis-cli"
+    prompts:
+      - wait: 500
+        input: "SETEX session:abc 3600 \"user123\""
+      - key: "enter"
+        wait: 300
+        input: "TTL session:abc"
+      - key: "enter"
+        wait: 300
+        input: "EXPIRE name 60"
+      - key: "enter"
+        wait: 300
+        input: "TTL name"
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "10-expiration"
+
+  # 9. Keys operations
+  - name: 09-keys
+    description: "Keys operations"
+    cwd: ~
+    command: "redis-cli"
+    prompts:
+      - wait: 500
+        input: "KEYS *"
+      - key: "enter"
+        wait: 300
+        input: "EXISTS name"
+      - key: "enter"
+        wait: 300
+        input: "TYPE user:1"
+      - key: "enter"
+        wait: 300
+        input: "DEL counter"
+      - key: "enter"
+        wait: 300
+        capture: true
+        capture_name: "11-keys"
