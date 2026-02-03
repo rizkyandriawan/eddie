@@ -2,6 +2,7 @@ package runner
 
 import (
 	"fmt"
+	"image/color"
 	"io"
 	"os"
 	"os/exec"
@@ -151,17 +152,17 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 		if prompt.Capture {
 			outputPath := fmt.Sprintf("%s/%s.png", r.config.Output, captureName)
 
-			// Get screen content from virtual terminal
+			// Get screen buffer with colors from virtual terminal
 			mu.Lock()
-			screenContent := getScreenContent(term, cols, rows)
+			defaultFG := parseHexColor(r.config.Theme.Foreground)
+			defaultBG := parseHexColor(r.config.Theme.Background)
+			screenBuffer := GetScreenBuffer(term, cols, rows, defaultFG, defaultBG)
 			mu.Unlock()
 
-			err := r.renderer.Render(
-				screenContent,
-				cols,
-				rows,
-				outputPath,
-			)
+			// Convert to renderer's ScreenBuffer type
+			renderBuffer := convertToRenderBuffer(screenBuffer)
+
+			err := r.renderer.RenderBuffer(renderBuffer, outputPath)
 			if err != nil {
 				return result, fmt.Errorf("failed to render screenshot: %w", err)
 			}
@@ -193,23 +194,6 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 	return result, nil
 }
 
-// getScreenContent extracts the visible screen content from the virtual terminal
-func getScreenContent(term vt10x.Terminal, cols, rows int) string {
-	var lines []string
-	for row := 0; row < rows; row++ {
-		var line strings.Builder
-		for col := 0; col < cols; col++ {
-			cell := term.Cell(col, row)
-			if cell.Char == 0 {
-				line.WriteRune(' ')
-			} else {
-				line.WriteRune(cell.Char)
-			}
-		}
-		lines = append(lines, strings.TrimRight(line.String(), " "))
-	}
-	return strings.Join(lines, "\n")
-}
 
 // RunAll runs all sessions
 func (r *Runner) RunAll() ([]SessionResult, error) {
@@ -302,4 +286,66 @@ func CaptureScreen(ptmx *os.File, output io.Writer) error {
 	}
 	output.Write(buf[:n])
 	return nil
+}
+
+// convertToRenderBuffer converts runner.ScreenBuffer to renderer.ScreenBuffer
+func convertToRenderBuffer(sb *ScreenBuffer) *renderer.ScreenBuffer {
+	rb := &renderer.ScreenBuffer{
+		Width:  sb.Width,
+		Height: sb.Height,
+		Lines:  make([]renderer.ScreenLine, len(sb.Lines)),
+	}
+
+	for i, line := range sb.Lines {
+		rl := renderer.ScreenLine{
+			Cells: make([]renderer.ScreenCell, len(line.Cells)),
+		}
+		for j, cell := range line.Cells {
+			rl.Cells[j] = renderer.ScreenCell{
+				Char: cell.Char,
+				FG:   cell.FG,
+				BG:   cell.BG,
+			}
+		}
+		rb.Lines[i] = rl
+	}
+
+	return rb
+}
+
+// parseHexColor parses a hex color string like "#1a1a1a"
+func parseHexColor(hex string) color.RGBA {
+	if len(hex) == 0 {
+		return color.RGBA{212, 212, 212, 255} // default gray
+	}
+
+	if hex[0] == '#' {
+		hex = hex[1:]
+	}
+
+	if len(hex) != 6 {
+		return color.RGBA{212, 212, 212, 255}
+	}
+
+	r := hexToByte(hex[0:2])
+	g := hexToByte(hex[2:4])
+	b := hexToByte(hex[4:6])
+
+	return color.RGBA{r, g, b, 255}
+}
+
+func hexToByte(s string) uint8 {
+	var val uint8
+	for _, c := range s {
+		val *= 16
+		switch {
+		case c >= '0' && c <= '9':
+			val += uint8(c - '0')
+		case c >= 'a' && c <= 'f':
+			val += uint8(c - 'a' + 10)
+		case c >= 'A' && c <= 'F':
+			val += uint8(c - 'A' + 10)
+		}
+	}
+	return val
 }

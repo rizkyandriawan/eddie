@@ -4,12 +4,29 @@ import (
 	"image/color"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/fogleman/gg"
-	"github.com/rizkyandriawan/eddie/internal/ansi"
 	"github.com/rizkyandriawan/eddie/internal/config"
 )
+
+// ScreenCell represents a single cell with character and colors
+type ScreenCell struct {
+	Char rune
+	FG   color.RGBA
+	BG   color.RGBA
+}
+
+// ScreenLine represents a line of cells
+type ScreenLine struct {
+	Cells []ScreenCell
+}
+
+// ScreenBuffer represents the entire screen state with colors
+type ScreenBuffer struct {
+	Lines  []ScreenLine
+	Width  int
+	Height int
+}
 
 // Renderer renders terminal output to PNG
 type Renderer struct {
@@ -17,6 +34,7 @@ type Renderer struct {
 	fontPath   string
 	charWidth  float64
 	charHeight float64
+	fontSize   float64
 }
 
 // NewRenderer creates a new renderer
@@ -25,12 +43,18 @@ func NewRenderer(theme config.Theme) *Renderer {
 		theme: theme,
 	}
 
+	// Use larger font size for better resolution
+	r.fontSize = theme.FontSize
+	if r.fontSize < 16 {
+		r.fontSize = 16 // minimum for readability
+	}
+
 	// Try to find a monospace font
 	r.fontPath = findFont()
 
-	// Estimate character dimensions based on font size
-	r.charWidth = theme.FontSize * 0.6
-	r.charHeight = theme.FontSize * 1.4
+	// Character dimensions based on font size
+	r.charWidth = r.fontSize * 0.6
+	r.charHeight = r.fontSize * 1.2
 
 	return r
 }
@@ -39,13 +63,21 @@ func NewRenderer(theme config.Theme) *Renderer {
 func findFont() string {
 	// Common monospace font locations
 	paths := []string{
+		// Linux
 		"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+		"/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
 		"/usr/share/fonts/TTF/DejaVuSansMono.ttf",
 		"/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
 		"/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf",
+		"/usr/share/fonts/truetype/jetbrains-mono/JetBrainsMono-Regular.ttf",
+		"/usr/share/fonts/truetype/firacode/FiraCode-Regular.ttf",
+		// macOS
 		"/System/Library/Fonts/Menlo.ttc",
 		"/System/Library/Fonts/Monaco.ttf",
+		"/Library/Fonts/SF-Mono-Regular.otf",
+		// Windows
 		"C:\\Windows\\Fonts\\consola.ttf",
+		"C:\\Windows\\Fonts\\cour.ttf",
 	}
 
 	for _, p := range paths {
@@ -57,16 +89,16 @@ func findFont() string {
 	return ""
 }
 
-// Render renders terminal output to a PNG file
-func (r *Renderer) Render(output string, width, height int, outputPath string) error {
-	// Parse terminal dimensions
-	cols := width
-	rows := height
-
+// RenderBuffer renders a ScreenBuffer to a PNG file with colors
+func (r *Renderer) RenderBuffer(buffer *ScreenBuffer, outputPath string) error {
 	// Calculate image dimensions
 	padding := float64(r.theme.Padding)
-	imgWidth := int(float64(cols)*r.charWidth + padding*2)
-	imgHeight := int(float64(rows)*r.charHeight + padding*2)
+	if padding < 20 {
+		padding = 20
+	}
+
+	imgWidth := int(float64(buffer.Width)*r.charWidth + padding*2)
+	imgHeight := int(float64(buffer.Height)*r.charHeight + padding*2)
 
 	// Create drawing context
 	dc := gg.NewContext(imgWidth, imgHeight)
@@ -78,71 +110,32 @@ func (r *Renderer) Render(output string, width, height int, outputPath string) e
 
 	// Load font
 	if r.fontPath != "" {
-		if err := dc.LoadFontFace(r.fontPath, r.theme.FontSize); err != nil {
+		if err := dc.LoadFontFace(r.fontPath, r.fontSize); err != nil {
 			// Fall back to basic font if loading fails
 			r.fontPath = ""
 		}
 	}
 
-	// Parse and render the output
-	fgColor := parseHexColor(r.theme.Foreground)
-	parser := ansi.NewParser(fgColor, bgColor)
+	// Render each cell
+	for row, line := range buffer.Lines {
+		y := padding + float64(row)*r.charHeight + r.charHeight*0.85 // baseline offset
 
-	lines := strings.Split(output, "\n")
-	y := padding + r.charHeight
-
-	for lineNum, line := range lines {
-		if lineNum >= rows {
-			break
-		}
-
-		// Parse ANSI codes in this line
-		segments := parser.Parse(line)
-
-		x := padding
-		for _, seg := range segments {
-			// Handle special characters
-			text := seg.Text
-			text = strings.ReplaceAll(text, "\r", "")
-			text = strings.ReplaceAll(text, "\t", "    ")
-
-			// Skip control characters
-			var cleanText strings.Builder
-			for _, ch := range text {
-				if ch >= 32 || ch == '\t' {
-					cleanText.WriteRune(ch)
-				}
-			}
-			text = cleanText.String()
-
-			if text == "" {
-				continue
-			}
+		for col, cell := range line.Cells {
+			x := padding + float64(col)*r.charWidth
 
 			// Draw background if different from default
-			if seg.Background != bgColor {
-				textWidth := float64(len(text)) * r.charWidth
-				dc.SetColor(seg.Background)
-				dc.DrawRectangle(x, y-r.charHeight+4, textWidth, r.charHeight)
+			if cell.BG != bgColor && cell.BG.A > 0 {
+				dc.SetColor(cell.BG)
+				dc.DrawRectangle(x, padding+float64(row)*r.charHeight, r.charWidth, r.charHeight)
 				dc.Fill()
 			}
 
-			// Draw text
-			dc.SetColor(seg.Foreground)
-			dc.DrawString(text, x, y)
-
-			// Draw underline if needed
-			if seg.Underline {
-				textWidth := float64(len(text)) * r.charWidth
-				dc.SetLineWidth(1)
-				dc.DrawLine(x, y+2, x+textWidth, y+2)
-				dc.Stroke()
+			// Draw character
+			if cell.Char != ' ' && cell.Char != 0 {
+				dc.SetColor(cell.FG)
+				dc.DrawString(string(cell.Char), x, y)
 			}
-
-			x += float64(len(text)) * r.charWidth
 		}
-
-		y += r.charHeight
 	}
 
 	// Ensure output directory exists
@@ -152,6 +145,69 @@ func (r *Renderer) Render(output string, width, height int, outputPath string) e
 	}
 
 	return dc.SavePNG(outputPath)
+}
+
+// Render renders plain text terminal output to a PNG file (legacy method)
+func (r *Renderer) Render(output string, width, height int, outputPath string) error {
+	// Convert plain text to ScreenBuffer (all default colors)
+	fgColor := parseHexColor(r.theme.Foreground)
+	bgColor := parseHexColor(r.theme.Background)
+
+	buffer := &ScreenBuffer{
+		Width:  width,
+		Height: height,
+		Lines:  make([]ScreenLine, height),
+	}
+
+	lines := splitLines(output)
+	for row := 0; row < height; row++ {
+		line := ScreenLine{
+			Cells: make([]ScreenCell, width),
+		}
+
+		var lineText string
+		if row < len(lines) {
+			lineText = lines[row]
+		}
+
+		runes := []rune(lineText)
+		for col := 0; col < width; col++ {
+			ch := ' '
+			if col < len(runes) {
+				ch = runes[col]
+			}
+
+			line.Cells[col] = ScreenCell{
+				Char: ch,
+				FG:   fgColor,
+				BG:   bgColor,
+			}
+		}
+
+		buffer.Lines[row] = line
+	}
+
+	return r.RenderBuffer(buffer, outputPath)
+}
+
+func splitLines(s string) []string {
+	var lines []string
+	var current []rune
+
+	for _, r := range s {
+		if r == '\n' {
+			lines = append(lines, string(current))
+			current = nil
+		} else if r != '\r' {
+			current = append(current, r)
+		}
+	}
+
+	if len(current) > 0 {
+		lines = append(lines, string(current))
+	}
+
+	return lines
 }
 
 // parseHexColor parses a hex color string like "#1a1a1a"

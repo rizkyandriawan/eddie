@@ -11,8 +11,8 @@ theme:
   name: dark
   background: "#1a1a1a"
   foreground: "#d4d4d4"
-  font_size: 14
-  padding: 20
+  font_size: 20
+  padding: 40
 
 sessions:
   - name: eddie-parker-joke
