@@ -10,10 +10,10 @@ terminal:
 
 theme:
   name: dark
-  background: "#1e1e1e"
+  background: "#000000"
   foreground: "#d4d4d4"
-  font_size: 20
-  padding: 40
+  font_size: 18
+  padding: 12
 
 sessions:
   - name: redis-ping

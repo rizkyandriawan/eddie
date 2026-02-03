@@ -91,10 +91,10 @@ func findFont() string {
 
 // RenderBuffer renders a ScreenBuffer to a PNG file with colors
 func (r *Renderer) RenderBuffer(buffer *ScreenBuffer, outputPath string) error {
-	// Calculate image dimensions - just padding, no extra margin
+	// Calculate image dimensions - minimal padding
 	padding := float64(r.theme.Padding)
-	if padding < 16 {
-		padding = 16
+	if padding < 6 {
+		padding = 6
 	}
 
 	imgWidth := int(float64(buffer.Width)*r.charWidth + padding*2)

@@ -2,7 +2,7 @@
   "tool": "eddie",
   "version": "1.0.0",
   "target": "claude-code",
-  "generated_at": "2026-02-03T09:45:38Z",
+  "generated_at": "2026-02-03T09:46:33Z",
   "terminal": {
     "width": 80,
     "height": 24,
