@@ -91,12 +91,12 @@ func findFont() string {
 
 // RenderBuffer renders a ScreenBuffer to a PNG file with colors
 func (r *Renderer) RenderBuffer(buffer *ScreenBuffer, outputPath string) error {
-	// Calculate image dimensions with generous margin
+	// Calculate image dimensions with small margin
 	padding := float64(r.theme.Padding)
-	if padding < 40 {
-		padding = 40
+	if padding < 20 {
+		padding = 20
 	}
-	margin := padding // Extra margin around the terminal
+	margin := 16.0 // Small fixed margin around the terminal
 
 	imgWidth := int(float64(buffer.Width)*r.charWidth + padding*2 + margin*2)
 	imgHeight := int(float64(buffer.Height)*r.charHeight + padding*2 + margin*2)
@@ -104,22 +104,10 @@ func (r *Renderer) RenderBuffer(buffer *ScreenBuffer, outputPath string) error {
 	// Create drawing context
 	dc := gg.NewContext(imgWidth, imgHeight)
 
-	// Fill outer margin with slightly different shade
+	// Fill background with same color everywhere
 	bgColor := parseHexColor(r.theme.Background)
-	marginColor := darkenColor(bgColor, 0.15)
-	dc.SetColor(marginColor)
-	dc.Clear()
-
-	// Draw terminal area with background color
-	termX := margin
-	termY := margin
-	termW := float64(buffer.Width)*r.charWidth + padding*2
-	termH := float64(buffer.Height)*r.charHeight + padding*2
-
-	// Draw rounded rectangle for terminal
 	dc.SetColor(bgColor)
-	drawRoundedRect(dc, termX, termY, termW, termH, 12)
-	dc.Fill()
+	dc.Clear()
 
 	// Load font
 	if r.fontPath != "" {
