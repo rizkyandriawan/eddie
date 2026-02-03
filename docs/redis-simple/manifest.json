@@ -1,0 +1,43 @@
+{
+  "tool": "eddie",
+  "version": "1.0.0",
+  "target": "claude-code",
+  "generated_at": "2026-02-03T09:43:04Z",
+  "terminal": {
+    "width": 80,
+    "height": 24,
+    "theme": "dark"
+  },
+  "sessions": [
+    {
+      "name": "redis-ping",
+      "description": "Basic Redis ping-pong",
+      "cwd": "",
+      "screenshots": [
+        {
+          "filename": "01-typing-redis-cli.png",
+          "prompt": "redis-cli",
+          "wait_ms": 1000
+        },
+        {
+          "filename": "02-redis-cli-started.png",
+          "wait_ms": 1000
+        },
+        {
+          "filename": "03-typing-ping.png",
+          "prompt": "PING"
+        },
+        {
+          "filename": "04-pong-response.png",
+          "wait_ms": 500
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_sessions": 1,
+    "total_screenshots": 4,
+    "success": 1,
+    "failed": 0
+  }
+}

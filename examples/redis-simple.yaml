@@ -1,0 +1,50 @@
+# Simple Redis Tutorial - Shell with redis-cli
+# Shows: username@hostname prompt -> redis-cli -> ping -> PONG
+
+output: ./docs/redis-simple
+manifest: true
+
+terminal:
+  width: 80
+  height: 24
+
+theme:
+  name: dark
+  background: "#1e1e1e"
+  foreground: "#d4d4d4"
+  font_size: 20
+  padding: 40
+
+sessions:
+  - name: redis-ping
+    description: "Basic Redis ping-pong"
+    cwd: ~
+    command: "bash"
+    prompts:
+      # 1. Wait for bash to start, then type redis-cli (capture the prompt)
+      - wait: 1000
+        input: "redis-cli"
+        capture: true
+        capture_name: "01-typing-redis-cli"
+
+      # 2. Press Enter to run redis-cli
+      - key: "enter"
+        wait: 1000
+        capture: true
+        capture_name: "02-redis-cli-started"
+
+      # 3. Type ping command
+      - input: "PING"
+        capture: true
+        capture_name: "03-typing-ping"
+
+      # 4. Press Enter to execute ping
+      - key: "enter"
+        wait: 500
+        capture: true
+        capture_name: "04-pong-response"
+
+      # 5. Exit redis-cli
+      - input: "exit"
+      - key: "enter"
+        wait: 500

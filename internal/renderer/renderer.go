@@ -91,22 +91,35 @@ func findFont() string {
 
 // RenderBuffer renders a ScreenBuffer to a PNG file with colors
 func (r *Renderer) RenderBuffer(buffer *ScreenBuffer, outputPath string) error {
-	// Calculate image dimensions
+	// Calculate image dimensions with generous margin
 	padding := float64(r.theme.Padding)
-	if padding < 20 {
-		padding = 20
+	if padding < 40 {
+		padding = 40
 	}
+	margin := padding // Extra margin around the terminal
 
-	imgWidth := int(float64(buffer.Width)*r.charWidth + padding*2)
-	imgHeight := int(float64(buffer.Height)*r.charHeight + padding*2)
+	imgWidth := int(float64(buffer.Width)*r.charWidth + padding*2 + margin*2)
+	imgHeight := int(float64(buffer.Height)*r.charHeight + padding*2 + margin*2)
 
 	// Create drawing context
 	dc := gg.NewContext(imgWidth, imgHeight)
 
-	// Fill background
+	// Fill outer margin with slightly different shade
 	bgColor := parseHexColor(r.theme.Background)
-	dc.SetColor(bgColor)
+	marginColor := darkenColor(bgColor, 0.15)
+	dc.SetColor(marginColor)
 	dc.Clear()
+
+	// Draw terminal area with background color
+	termX := margin
+	termY := margin
+	termW := float64(buffer.Width)*r.charWidth + padding*2
+	termH := float64(buffer.Height)*r.charHeight + padding*2
+
+	// Draw rounded rectangle for terminal
+	dc.SetColor(bgColor)
+	drawRoundedRect(dc, termX, termY, termW, termH, 12)
+	dc.Fill()
 
 	// Load font
 	if r.fontPath != "" {
@@ -116,17 +129,20 @@ func (r *Renderer) RenderBuffer(buffer *ScreenBuffer, outputPath string) error {
 		}
 	}
 
-	// Render each cell
+	// Render each cell (offset by margin + padding)
+	offsetX := margin + padding
+	offsetY := margin + padding
+
 	for row, line := range buffer.Lines {
-		y := padding + float64(row)*r.charHeight + r.charHeight*0.85 // baseline offset
+		y := offsetY + float64(row)*r.charHeight + r.charHeight*0.85 // baseline offset
 
 		for col, cell := range line.Cells {
-			x := padding + float64(col)*r.charWidth
+			x := offsetX + float64(col)*r.charWidth
 
 			// Draw background if different from default
 			if cell.BG != bgColor && cell.BG.A > 0 {
 				dc.SetColor(cell.BG)
-				dc.DrawRectangle(x, padding+float64(row)*r.charHeight, r.charWidth, r.charHeight)
+				dc.DrawRectangle(x, offsetY+float64(row)*r.charHeight, r.charWidth, r.charHeight)
 				dc.Fill()
 			}
 
@@ -245,4 +261,29 @@ func hexToByte(s string) uint8 {
 		}
 	}
 	return val
+}
+
+// darkenColor makes a color darker by the given factor (0-1)
+func darkenColor(c color.RGBA, factor float64) color.RGBA {
+	return color.RGBA{
+		R: uint8(float64(c.R) * (1 - factor)),
+		G: uint8(float64(c.G) * (1 - factor)),
+		B: uint8(float64(c.B) * (1 - factor)),
+		A: c.A,
+	}
+}
+
+// drawRoundedRect draws a rounded rectangle
+func drawRoundedRect(dc *gg.Context, x, y, w, h, r float64) {
+	dc.NewSubPath()
+	dc.MoveTo(x+r, y)
+	dc.LineTo(x+w-r, y)
+	dc.DrawArc(x+w-r, y+r, r, -gg.Radians(90), 0)
+	dc.LineTo(x+w, y+h-r)
+	dc.DrawArc(x+w-r, y+h-r, r, 0, gg.Radians(90))
+	dc.LineTo(x+r, y+h)
+	dc.DrawArc(x+r, y+h-r, r, gg.Radians(90), gg.Radians(180))
+	dc.LineTo(x, y+r)
+	dc.DrawArc(x+r, y+r, r, gg.Radians(180), gg.Radians(270))
+	dc.ClosePath()
 }

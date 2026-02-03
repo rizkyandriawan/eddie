@@ -1,0 +1,167 @@
+# Redis Tutorial - Verbose with Screenshots
+# Using Eddie to capture Claude Code explaining Redis
+
+output: ./docs/redis-tutorial
+manifest: true
+
+terminal:
+  width: 120
+  height: 40
+
+theme:
+  name: dark
+  background: "#1a1a1a"
+  foreground: "#d4d4d4"
+  font_size: 18
+  padding: 30
+
+sessions:
+  # 1. Introduction to Redis
+  - name: 01-intro
+    description: "What is Redis?"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Explain what Redis is in 3-4 sentences. Keep it simple and beginner-friendly."
+        capture: true
+        capture_name: "01a-intro-prompt"
+      - key: "enter"
+        wait: 30000
+        capture: true
+        capture_name: "01b-intro-response"
+
+  # 2. Basic String Commands
+  - name: 02-strings
+    description: "Redis String commands"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Show me basic Redis string commands (SET, GET, INCR, DECR) with examples. Use redis-cli format."
+        capture: true
+        capture_name: "02a-strings-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "02b-strings-response"
+
+  # 3. Hash Commands
+  - name: 03-hashes
+    description: "Redis Hash commands"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Now show Redis hash commands (HSET, HGET, HGETALL, HMSET) with a user profile example."
+        capture: true
+        capture_name: "03a-hashes-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "03b-hashes-response"
+
+  # 4. List Commands
+  - name: 04-lists
+    description: "Redis List commands"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Explain Redis list commands (LPUSH, RPUSH, LPOP, RPOP, LRANGE) with a task queue example."
+        capture: true
+        capture_name: "04a-lists-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "04b-lists-response"
+
+  # 5. Set Commands
+  - name: 05-sets
+    description: "Redis Set commands"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Show Redis set commands (SADD, SMEMBERS, SINTER, SUNION) with a tags/categories example."
+        capture: true
+        capture_name: "05a-sets-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "05b-sets-response"
+
+  # 6. Sorted Sets
+  - name: 06-sorted-sets
+    description: "Redis Sorted Set commands"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Explain Redis sorted sets (ZADD, ZRANGE, ZRANK, ZSCORE) with a leaderboard example."
+        capture: true
+        capture_name: "06a-sortedsets-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "06b-sortedsets-response"
+
+  # 7. Expiration & TTL
+  - name: 07-expiration
+    description: "Key expiration in Redis"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "How do I set expiration on Redis keys? Show EXPIRE, TTL, SETEX commands with session token example."
+        capture: true
+        capture_name: "07a-expiration-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "07b-expiration-response"
+
+  # 8. Pub/Sub
+  - name: 08-pubsub
+    description: "Redis Pub/Sub messaging"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Explain Redis Pub/Sub (PUBLISH, SUBSCRIBE) with a simple chat notification example."
+        capture: true
+        capture_name: "08a-pubsub-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "08b-pubsub-response"
+
+  # 9. Transactions
+  - name: 09-transactions
+    description: "Redis Transactions"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Show how Redis transactions work (MULTI, EXEC, WATCH) with a bank transfer example."
+        capture: true
+        capture_name: "09a-transactions-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "09b-transactions-response"
+
+  # 10. Use Cases Summary
+  - name: 10-usecases
+    description: "When to use Redis"
+    cwd: ~/writing/rizky-medium
+    command: "claude --continue"
+    prompts:
+      - wait: 3000
+        input: "Summarize the top 5 real-world use cases for Redis in bullet points."
+        capture: true
+        capture_name: "10a-usecases-prompt"
+      - key: "enter"
+        wait: 45000
+        capture: true
+        capture_name: "10b-usecases-response"
