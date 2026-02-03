@@ -1,0 +1,43 @@
+{
+  "tool": "eddie",
+  "version": "1.0.0",
+  "target": "claude-code",
+  "generated_at": "2026-02-03T09:31:51Z",
+  "terminal": {
+    "width": 120,
+    "height": 40,
+    "theme": "dark"
+  },
+  "sessions": [
+    {
+      "name": "eddie-parker-joke",
+      "description": "Claude Code makes a joke about Eddie and Parker",
+      "cwd": "/home/rizky/writing/rizky-medium",
+      "screenshots": [
+        {
+          "filename": "01-claude-opened.png",
+          "wait_ms": 3000
+        },
+        {
+          "filename": "02-prompt-typed.png",
+          "prompt": "tell me a short joke about Eddie Brock and Peter Parker as rival photographers",
+          "wait_ms": 1000
+        },
+        {
+          "filename": "03-prompt-sent.png",
+          "wait_ms": 2000
+        },
+        {
+          "filename": "04-joke-response.png",
+          "wait_ms": 60000
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_sessions": 1,
+    "total_screenshots": 4,
+    "success": 1,
+    "failed": 0
+  }
+}

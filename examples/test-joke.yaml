@@ -1,0 +1,42 @@
+# Test config: Capture Claude Code making a joke about Eddie and Parker
+
+output: ./test-screenshots
+manifest: true
+
+terminal:
+  width: 120
+  height: 40
+
+theme:
+  name: dark
+  background: "#1a1a1a"
+  foreground: "#d4d4d4"
+  font_size: 14
+  padding: 20
+
+sessions:
+  - name: eddie-parker-joke
+    description: "Claude Code makes a joke about Eddie and Parker"
+    cwd: ~/writing/rizky-medium
+    prompts:
+      # 1. Capture when Claude Code just opened (initial state)
+      - wait: 3000
+        capture: true
+        capture_name: "01-claude-opened"
+
+      # 2. Type the joke prompt (without Enter)
+      - input: "tell me a short joke about Eddie Brock and Peter Parker as rival photographers"
+        wait: 1000
+        capture: true
+        capture_name: "02-prompt-typed"
+
+      # 3. Press Enter to submit
+      - key: "enter"
+        wait: 2000
+        capture: true
+        capture_name: "03-prompt-sent"
+
+      # 4. Wait for Claude's response and capture the joke
+      - wait: 60000
+        capture: true
+        capture_name: "04-joke-response"

@@ -1,15 +1,16 @@
 package runner
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/creack/pty"
+	"github.com/hinshun/vt10x"
 	"github.com/rizkyandriawan/eddie/internal/config"
 	"github.com/rizkyandriawan/eddie/internal/renderer"
 )
@@ -63,34 +64,41 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 		}
 	}
 
+	// Create virtual terminal
+	cols := r.config.Terminal.Width
+	rows := r.config.Terminal.Height
+	term := vt10x.New(vt10x.WithSize(cols, rows))
+
 	// Start Claude Code in PTY
 	cmd := exec.Command("claude")
 	cmd.Dir = session.Cwd
 	cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{
-		Rows: uint16(r.config.Terminal.Height),
-		Cols: uint16(r.config.Terminal.Width),
+		Rows: uint16(rows),
+		Cols: uint16(cols),
 	})
 	if err != nil {
 		return result, fmt.Errorf("failed to start PTY: %w", err)
 	}
 	defer ptmx.Close()
 
-	// Buffer to collect output
-	var outputBuf bytes.Buffer
-	outputChan := make(chan struct{})
+	// Channel to signal process exit
+	done := make(chan struct{})
+	var mu sync.Mutex
 
-	// Read output continuously
+	// Read output continuously and feed to virtual terminal
 	go func() {
 		buf := make([]byte, 4096)
 		for {
 			n, err := ptmx.Read(buf)
 			if err != nil {
-				close(outputChan)
+				close(done)
 				return
 			}
-			outputBuf.Write(buf[:n])
+			mu.Lock()
+			term.Write(buf[:n])
+			mu.Unlock()
 		}
 	}()
 
@@ -108,12 +116,13 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 
 		// Send input or keystroke
 		if prompt.Input != "" {
-			// Send the text input
-			_, err := ptmx.Write([]byte(prompt.Input + "\n"))
+			// Send the text input (without automatic newline)
+			_, err := ptmx.Write([]byte(prompt.Input))
 			if err != nil {
 				return result, fmt.Errorf("failed to send input: %w", err)
 			}
-		} else if prompt.Key != "" {
+		}
+		if prompt.Key != "" {
 			// Send keystroke
 			keyBytes := keyToBytes(prompt.Key)
 			_, err := ptmx.Write(keyBytes)
@@ -129,7 +138,7 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 			if timeout == 0 {
 				timeout = 30000
 			}
-			err := waitUntil(&outputBuf, prompt.WaitUntil, time.Duration(timeout)*time.Millisecond)
+			err := waitUntilScreen(term, &mu, prompt.WaitUntil, time.Duration(timeout)*time.Millisecond)
 			if err != nil {
 				return result, fmt.Errorf("timeout waiting for '%s': %w", prompt.WaitUntil, err)
 			}
@@ -141,10 +150,16 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 		// Capture screenshot
 		if prompt.Capture {
 			outputPath := fmt.Sprintf("%s/%s.png", r.config.Output, captureName)
+
+			// Get screen content from virtual terminal
+			mu.Lock()
+			screenContent := getScreenContent(term, cols, rows)
+			mu.Unlock()
+
 			err := r.renderer.Render(
-				outputBuf.String(),
-				r.config.Terminal.Width,
-				r.config.Terminal.Height,
+				screenContent,
+				cols,
+				rows,
 				outputPath,
 			)
 			if err != nil {
@@ -170,12 +185,30 @@ func (r *Runner) RunSession(session config.Session) (*SessionResult, error) {
 
 	// Wait for process to exit
 	select {
-	case <-outputChan:
+	case <-done:
 	case <-time.After(5 * time.Second):
 		cmd.Process.Kill()
 	}
 
 	return result, nil
+}
+
+// getScreenContent extracts the visible screen content from the virtual terminal
+func getScreenContent(term vt10x.Terminal, cols, rows int) string {
+	var lines []string
+	for row := 0; row < rows; row++ {
+		var line strings.Builder
+		for col := 0; col < cols; col++ {
+			cell := term.Cell(col, row)
+			if cell.Char == 0 {
+				line.WriteRune(' ')
+			} else {
+				line.WriteRune(cell.Char)
+			}
+		}
+		lines = append(lines, strings.TrimRight(line.String(), " "))
+	}
+	return strings.Join(lines, "\n")
 }
 
 // RunAll runs all sessions
@@ -197,11 +230,14 @@ func (r *Runner) RunAll() ([]SessionResult, error) {
 	return results, nil
 }
 
-// waitUntil waits until the text appears in the buffer
-func waitUntil(buf *bytes.Buffer, text string, timeout time.Duration) error {
+// waitUntilScreen waits until the text appears on the virtual terminal screen
+func waitUntilScreen(term vt10x.Terminal, mu *sync.Mutex, text string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		if strings.Contains(buf.String(), text) {
+		mu.Lock()
+		screen := term.String()
+		mu.Unlock()
+		if strings.Contains(screen, text) {
 			return nil
 		}
 		time.Sleep(100 * time.Millisecond)

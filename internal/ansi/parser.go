@@ -47,6 +47,12 @@ var defaultColors = []color.RGBA{
 // ANSI escape sequence regex
 var ansiRegex = regexp.MustCompile(`\x1b\[([0-9;]*)([A-Za-z])`)
 
+// OSC (Operating System Command) regex - for terminal title, etc.
+var oscRegex = regexp.MustCompile(`\x1b\]([^\x07\x1b]*)(?:\x07|\x1b\\)`)
+
+// Other escape sequences to strip
+var otherEscRegex = regexp.MustCompile(`\x1b\][^\x07]*\x07?`)
+
 // Parser parses ANSI escape sequences
 type Parser struct {
 	defaultFg color.RGBA
@@ -70,6 +76,9 @@ func NewParser(fg, bg color.RGBA) *Parser {
 
 // Parse parses ANSI text into segments
 func (p *Parser) Parse(text string) []Segment {
+	// Pre-process: remove OSC sequences (terminal title, etc.)
+	text = stripOSC(text)
+
 	var segments []Segment
 	var currentText strings.Builder
 
@@ -242,5 +251,28 @@ func get256Color(idx int) color.RGBA {
 
 // StripANSI removes all ANSI escape sequences from text
 func StripANSI(text string) string {
+	text = stripOSC(text)
 	return ansiRegex.ReplaceAllString(text, "")
+}
+
+// stripOSC removes OSC (Operating System Command) sequences
+// These are used for terminal title, hyperlinks, etc.
+func stripOSC(text string) string {
+	// Remove OSC sequences: ESC ] ... BEL or ESC ] ... ESC \
+	result := otherEscRegex.ReplaceAllString(text, "")
+	// Also handle incomplete OSC at end of string
+	if idx := strings.Index(result, "\x1b]"); idx != -1 {
+		// Find if there's a terminator
+		end := strings.IndexAny(result[idx:], "\x07")
+		if end == -1 {
+			// No terminator found, might be incomplete - try to find next escape
+			nextEsc := strings.Index(result[idx+2:], "\x1b")
+			if nextEsc != -1 {
+				result = result[:idx] + result[idx+2+nextEsc:]
+			} else {
+				result = result[:idx]
+			}
+		}
+	}
+	return result
 }
